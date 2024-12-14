@@ -1,0 +1,49 @@
+logging:
+  levels:
+    DEBUG: false
+    INFO: true
+    WARNING: true
+    ERROR: true
+  output:
+    console: true
+    file:
+      enabled: true
+      path: logs/notion_agent.log
+      rotation:
+        max_size_mb: 10
+        backup_count: 5
+
+block_support:
+  supported_types:
+    block:
+      - type: paragraph
+      - type: heading_1
+      - type: heading_2
+      - type: heading_3
+      - type: to_do
+
+ai_models:
+  default:
+    provider: anthropic
+    model: Sonnet 3.5
+  providers:
+    anthropic:
+      models:
+        model:
+          - name: Sonnet 3.5
+            capabilities:
+              text_generation:
+                max_tokens: 100000
+    openai:
+      models:
+        model:
+          - name: 4o
+            capabilities:
+              text_generation:
+                max_tokens: 8000
+
+error_handling:
+  retry_policy:
+    max_attempts: 3
+    initial_backoff_seconds: 1.0
+    backoff_multiplier: 2.0
