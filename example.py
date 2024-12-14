@@ -4,7 +4,14 @@ from config import Config
 from notion_client import NotionClient
 from ai_client import AIClient
 
-def main():
+import asyncio
+import os
+from dotenv import load_dotenv
+from config import Config
+from notion_client import NotionClient
+from ai_client import AIClient
+
+async def main():
     # Load environment variables from .env file
     load_dotenv()
     
@@ -42,4 +49,4 @@ def main():
         print(f"Error: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
