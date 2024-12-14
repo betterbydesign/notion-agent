@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    Notion Agent Technical Specification
+    Version: 1.0.0
+    Description: Complete specification for Notion integration agent with AI capabilities
+    Last Updated: 2024-12-14
+-->
+<notion_agent_specification xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0">
+    <metadata>
+        <version>1.0.0</version>
+        <description>Technical specification for Notion integration agent with AI capabilities</description>
+        <created_date>2024-12-14</created_date>
+        <last_updated>2024-12-14</last_updated>
+    </metadata>
+
+    <requirements>
+        <dependencies>
+            <python_version>3.8+</python_version>
+            <required_packages>
+                <package name="notion-client" version="^1.0.0" />
+                <package name="anthropic" version="^0.5.0" />
+                <package name="openai" version="^1.0.0" />
+                <package name="pyyaml" version="^6.0" />
+                <package name="fastapi" version="^0.100.0" />
+                <package name="uvicorn" version="^0.22.0" />
+            </required_packages>
+        </dependencies>
+    </requirements>
+
+    <configuration>
+        <credentials>
+            <environment_variables>
+                <variable name="NOTION_WORKSPACE_A_TOKEN" required="true" secret="true" />
+                <variable name="NOTION_WORKSPACE_B_TOKEN" required="false" secret="true" />
+                <variable name="OPENAI_API_KEY" required="true" secret="true" />
+                <variable name="ANTHROPIC_API_KEY" required="true" secret="true" />
+            </environment_variables>
+            <validation>
+                <on_missing>fail_immediately</on_missing>
+                <startup_check>true</startup_check>
+            </validation>
+        </credentials>
+
+        <workspace_settings>
+            <selection>
+                <prompt_required>true</prompt_required>
+                <confirmation_required>true</confirmation_required>
+                <timeout_seconds>30</timeout_seconds>
+            </selection>
+            <validation>
+                <name_pattern>[a-zA-Z0-9_-]+</name_pattern>
+                <max_length>64</max_length>
+            </validation>
+        </workspace_settings>
+
+        <block_support>
+            <supported_types>
+                <block type="paragraph" />
+                <block type="heading_1" />
+                <block type="heading_2" />
+                <block type="heading_3" />
+                <block type="to_do" />
+            </supported_types>
+            <unsupported_handling>
+                <action>skip_with_warning</action>
+                <error_message>Block type '{type}' is not supported in this version</error_message>
+            </unsupported_handling>
+        </block_support>
+
+        <ai_models>
+            <default>
+                <provider>anthropic</provider>
+                <model>Sonnet 3.5</model>
+            </default>
+            <providers>
+                <anthropic>
+                    <models>
+                        <model name="Sonnet 3.5">
+                            <capabilities>
+                                <text_generation max_tokens="100000" />
+                                <analysis enabled="true" />
+                            </capabilities>
+                        </model>
+                    </models>
+                </anthropic>
+                <openai>
+                    <models>
+                        <model name="4o">
+                            <capabilities>
+                                <text_generation max_tokens="8000" />
+                                <analysis enabled="true" />
+                            </capabilities>
+                        </model>
+                        <model name="o1">
+                            <capabilities>
+                                <text_generation max_tokens="2000" />
+                                <analysis enabled="true" />
+                            </capabilities>
+                        </model>
+                    </models>
+                </openai>
+            </providers>
+            <model_switching>
+                <enabled>true</enabled>
+                <command_format>switch to {provider} model {model}</command_format>
+                <runtime_changes_allowed>true</runtime_changes_allowed>
+            </model_switching>
+        </ai_models>
+
+        <error_handling>
+            <retry_policy>
+                <max_attempts>3</max_attempts>
+                <initial_backoff_seconds>1.0</initial_backoff_seconds>
+                <backoff_multiplier>2.0</backoff_multiplier>
+                <max_backoff_seconds>30.0</max_backoff_seconds>
+            </retry_policy>
+            <timeouts>
+                <notion_api_seconds>30</notion_api_seconds>
+                <ai_api_seconds>30</ai_api_seconds>
+            </timeouts>
+            <error_codes>
+                <category name="credentials">
+                    <error code="E001" message="Missing required credentials" severity="fatal" />
+                    <error code="E002" message="Invalid credential format" severity="fatal" />
+                </category>
+                <category name="workspace">
+                    <error code="E101" message="Invalid workspace selection" severity="error" />
+                    <error code="E102" message="Workspace timeout" severity="error" />
+                </category>
+                <category name="api">
+                    <error code="E201" message="Rate limit exceeded" severity="error" />
+                    <error code="E202" message="API timeout" severity="error" />
+                </category>
+            </error_codes>
+        </error_handling>
+
+        <api_settings>
+            <authentication>
+                <enabled>false</enabled>
+                <future_support>true</future_support>
+            </authentication>
+            <rate_limiting>
+                <enabled>true</enabled>
+                <requests_per_minute>60</requests_per_minute>
+                <per_ip>true</per_ip>
+            </rate_limiting>
+        </api_settings>
+
+        <logging>
+            <levels>
+                <level name="DEBUG" enabled="false" />
+                <level name="INFO" enabled="true" />
+                <level name="WARNING" enabled="true" />
+                <level name="ERROR" enabled="true" />
+            </levels>
+            <output>
+                <console>true</console>
+                <file>
+                    <enabled>true</enabled>
+                    <path>logs/notion_agent.log</path>
+                    <rotation>
+                        <max_size_mb>10</max_size_mb>
+                        <backup_count>5</backup_count>
+                    </rotation>
+                </file>
+            </output>
+        </logging>
+    </configuration>
+
+    <implementation>
+        <modules>
+            <module name="config">
+                <file>config.py</file>
+                <purpose>Configuration management and initialization</purpose>
+                <responsibilities>
+                    <item>Load and parse YAML configuration</item>
+                    <item>Validate environment variables</item>
+                    <item>Initialize logging system</item>
+                </responsibilities>
+            </module>
+
+            <module name="notion_client">
+                <file>notion_client.py</file>
+                <purpose>Notion API interaction handler</purpose>
+                <responsibilities>
+                    <item>Handle all Notion API calls</item>
+                    <item>Implement retry logic</item>
+                    <item>Validate block types</item>
+                    <item>Handle rate limiting</item>
+                </responsibilities>
+            </module>
+
+            <module name="ai_client">
+                <file>ai_client.py</file>
+                <purpose>AI model management</purpose>
+                <responsibilities>
+                    <item>Handle AI provider interactions</item>
+                    <item>Manage model switching</item>
+                    <item>Implement retry logic</item>
+                    <item>Track usage and costs</item>
+                </responsibilities>
+            </module>
+
+            <module name="terminal_ui">
+                <file>terminal_ui.py</file>
+                <purpose>User interface handler</purpose>
+                <responsibilities>
+                    <item>Handle workspace selection</item>
+                    <item>Process user commands</item>
+                    <item>Display results and errors</item>
+                </responsibilities>
+            </module>
+
+            <module name="api_server">
+                <file>api_server.py</file>
+                <purpose>REST API implementation</purpose>
+                <responsibilities>
+                    <item>Implement OpenAPI endpoints</item>
+                    <item>Handle request validation</item>
+                    <item>Implement rate limiting</item>
+                </responsibilities>
+            </module>
+        </modules>
+
+        <startup_sequence>
+            <step order="1">
+                <name>Configuration Loading</name>
+                <description>Load and validate configuration file</description>
+                <error_handling>Fail if invalid</error_handling>
+            </step>
+            <step order="2">
+                <name>Credential Verification</name>
+                <description>Check all required environment variables</description>
+                <error_handling>Fail if missing required credentials</error_handling>
+            </step>
+            <step order="3">
+                <name>Logging Setup</name>
+                <description>Initialize logging system</description>
+                <error_handling>Create log directory if missing</error_handling>
+            </step>
+            <step order="4">
+                <name>Workspace Selection</name>
+                <description>Prompt for workspace selection</description>
+                <error_handling>Retry on invalid selection</error_handling>
+            </step>
+            <step order="5">
+                <name>Client Initialization</name>
+                <description>Initialize Notion and AI clients</description>
+                <error_handling>Retry on connection failure</error_handling>
+            </step>
+            <step order="6">
+                <name>API Server Start</name>
+                <description>Start the API server</description>
+                <error_handling>Fail if port is in use</error_handling>
+            </step>
+        </startup_sequence>
+
+        <shutdown_sequence>
+            <step order="1">
+                <name>API Server Shutdown</name>
+                <description>Gracefully stop API server</description>
+            </step>
+            <step order="2">
+                <name>Client Cleanup</name>
+                <description>Close active client connections</description>
+            </step>
+            <step order="3">
+                <name>Log Finalization</name>
+                <description>Flush and close log files</description>
+            </step>
+        </shutdown_sequence>
+    </implementation>
+</notion_agent_specification>
